@@ -1,0 +1,147 @@
+<template>
+    <div class="login-container">
+      <form @submit.prevent="handleSubmit" class="login-form">
+        <h2>用户登录</h2>
+        
+        <div class="form-group">
+          <label>用户名</label>
+          <input 
+            type="text" 
+            v-model="form.username" 
+            required
+            @input="validateField('username')"
+          />
+          <span class="error" v-if="errors.username">{{ errors.username }}</span>
+        </div>
+  
+        <div class="form-group">
+          <label>密码</label>
+          <input 
+            type="password" 
+            v-model="form.password" 
+            required
+            @input="validateField('password')"
+          >
+          <span class="error" v-if="errors.password">{{ errors.password }}</span>
+        </div>
+        <div class="form-group">
+          <label>
+            忘记密码？<router-link to="/Reset">重置密码</router-link>
+          </label>
+        </div>
+        <button type="submit" :disabled="isSubmitting">
+          {{ isSubmitting ? '登录中...' : '登录' }}
+        </button>
+        <div class="form-group">
+          <label>
+            没有账号？<router-link to="/Register">注册</router-link>
+          </label>
+        </div>
+        <div class="error" v-if="loginError">{{ loginError }}</div>
+      </form>
+    </div>
+  </template>
+  
+  <script setup>
+  import { ref, reactive } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useAuthStore } from '@/stores/auth'
+  
+  const router = useRouter()
+  const authStore = useAuthStore()
+  
+  const form = reactive({
+    username: '',
+    password: ''
+  })
+  
+  const errors = reactive({
+    username: '',
+    password: ''
+  })
+  
+  const isSubmitting = ref(false)
+  const loginError = ref('')
+  
+  const validationRules = {
+    username: value => value.length >= 3 || '用户名至少3个字符',
+    password: value => value.length >= 6 || '密码至少6个字符'
+  }
+  
+  const validateField = (field) => {
+    errors[field] = validationRules[field](form[field]) || ''
+  }
+  
+  const handleSubmit = async () => {
+    Object.keys(form).forEach(field => validateField(field))
+    if (Object.values(errors).some(error => error)) return
+  
+    try {
+      isSubmitting.value = true
+      await authStore.login(form)
+      router.push('/')
+    } catch (error) {
+      loginError.value = error.message || '登录失败'
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+  </script>
+  
+  <style scoped>
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: min(90vw, 600px); /* 最大600px，最小90%视宽 */
+    min-height: min(80vh, 560px); /* 高度自适应 */
+    background: white;
+  }
+  @media (min-width: 768px) {
+  .login-form {
+    padding: 4rem 3rem; /* 大屏增加内边距 */
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+}
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  
+  input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  button {
+    width: 100%;
+    padding: 0.75rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  .error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  </style>
