@@ -57,3 +57,24 @@ h1 {
   background: #2980b9;
 }
 </style>
+
+<style>
+/* 确保根元素和body没有默认边距 */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: #ffffff; /* 添加白色背景 */
+  color: #333333; /* 设置文本颜色，确保在白色背景上可见 */
+}
+
+#app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background-color: #ffffff; /* 添加白色背景 */
+}
+</style>
