@@ -1,7 +1,8 @@
+<!-- Register.vue -->
 <template>
     <div class="login-container">
       <form @submit.prevent="handleSubmit" class="login-form">
-        <h2>用户登录</h2>
+        <h2>用户注册</h2>
         
         <div class="form-group">
           <label>用户名</label>
@@ -15,6 +16,17 @@
         </div>
   
         <div class="form-group">
+          <label>邮箱</label>
+          <input 
+            type="email" 
+            v-model="form.email" 
+            required
+            @input="validateField('email')"
+          />
+          <span class="error" v-if="errors.email">{{ errors.email }}</span>
+        </div>
+  
+        <div class="form-group">
           <label>密码</label>
           <input 
             type="password" 
@@ -24,20 +36,27 @@
           >
           <span class="error" v-if="errors.password">{{ errors.password }}</span>
         </div>
+  
         <div class="form-group">
-          <label>
-            忘记密码？<router-link to="/reset">重置密码</router-link>
-          </label>
+          <label>确认密码</label>
+          <input 
+            type="password" 
+            v-model="form.confirmPassword" 
+            required
+            @input="validateField('confirmPassword')"
+          >
+          <span class="error" v-if="errors.confirmPassword">{{ errors.confirmPassword }}</span>
         </div>
+  
         <button type="submit" :disabled="isSubmitting">
-          {{ isSubmitting ? '登录中...' : '登录' }}
+          {{ isSubmitting ? '注册中...' : '注册' }}
         </button>
         <div class="form-group">
           <label>
-            没有账号？<router-link to="/register">注册</router-link>
+            已有账号？<router-link to="/login">登录</router-link>
           </label>
         </div>
-        <div class="error" v-if="loginError">{{ loginError }}</div>
+        <div class="error" v-if="registerError">{{ registerError }}</div>
       </form>
     </div>
   </template>
@@ -52,20 +71,27 @@
   
   const form = reactive({
     userName: '',
-    password: ''
+    email: '',
+    password: '',
+    confirmPassword: ''
   })
   
   const errors = reactive({
     userName: '',
-    password: ''
+    email: '',
+    password: '',
+    confirmPassword: ''
   })
   
   const isSubmitting = ref(false)
-  const loginError = ref('')
+  const registerError = ref('')
   
   const validationRules = {
     userName: value => value.length >= 3 || '用户名至少3个字符',
-    password: value => value.length >= 6 || '密码至少6个字符'
+    email: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || '邮箱格式不正确',
+    password: value => value.length >= 6 || '密码至少6个字符',
+    confirmPassword: value => 
+      value === form.password || '两次输入的密码不一致'
   }
   
   const validateField = (field) => {
@@ -75,22 +101,18 @@
   const handleSubmit = async () => {
     Object.keys(form).forEach(field => validateField(field))
     if (Object.values(errors).some(error => error)) return
-    if (form.userName === 'admin' || form.password === '123456') {
-      router.push('/') 
-      return
-    }
+  
     try {
       isSubmitting.value = true
-      await authStore.login(form)
-      router.push('/') 
+      await authStore.register({userName:form.userName, emailbox:form.email, password:form.password})
+      router.push('/login')
     } catch (error) {
-      loginError.value = error.message || '登录失败'
+      registerError.value = error.message || '注册失败'
     } finally {
       isSubmitting.value = false
     }
   }
   </script>
-  
   <style scoped>
   .login-container {
     display: flex;

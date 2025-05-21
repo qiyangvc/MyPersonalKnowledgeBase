@@ -26,7 +26,7 @@ const $route = useRoute()
 .welcome-container {
   text-align: center;
   padding: 2rem;
-  max-width: 800px;
+  /* max-width: ; */
   margin: 5rem auto;
 }
 
@@ -56,9 +56,7 @@ h1 {
 .login-button:hover {
   background: #2980b9;
 }
-</style>
-
-<style>
+/* 下面两项不一定必要 */
 /* 确保根元素和body没有默认边距 */
 html, body {
   margin: 0;
@@ -78,3 +76,4 @@ html, body {
   background-color: #ffffff; /* 添加白色背景 */
 }
 </style>
+

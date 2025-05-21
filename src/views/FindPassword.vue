@@ -1,90 +1,72 @@
+<!-- ResetPassword.vue -->
 <template>
     <div class="login-container">
       <form @submit.prevent="handleSubmit" class="login-form">
-        <h2>用户登录</h2>
+        <h2>重置密码</h2>
         
         <div class="form-group">
-          <label>用户名</label>
+          <label>注册邮箱</label>
           <input 
-            type="text" 
-            v-model="form.userName" 
+            type="email" 
+            v-model="form.email" 
             required
-            @input="validateField('userName')"
+            @input="validateField('email')"
           />
-          <span class="error" v-if="errors.userName">{{ errors.userName }}</span>
+          <span class="error" v-if="errors.email">{{ errors.email }}</span>
         </div>
   
-        <div class="form-group">
-          <label>密码</label>
-          <input 
-            type="password" 
-            v-model="form.password" 
-            required
-            @input="validateField('password')"
-          >
-          <span class="error" v-if="errors.password">{{ errors.password }}</span>
-        </div>
-        <div class="form-group">
-          <label>
-            忘记密码？<router-link to="/reset">重置密码</router-link>
-          </label>
-        </div>
         <button type="submit" :disabled="isSubmitting">
-          {{ isSubmitting ? '登录中...' : '登录' }}
+          {{ isSubmitting ? '发送中...' : '发送重置邮件' }}
         </button>
         <div class="form-group">
           <label>
-            没有账号？<router-link to="/register">注册</router-link>
+            想起密码了？<router-link to="/login">返回登录</router-link>
           </label>
         </div>
-        <div class="error" v-if="loginError">{{ loginError }}</div>
+        <div class="success" v-if="successMessage">{{ successMessage }}</div>
+        <div class="error" v-if="resetError">{{ resetError }}</div>
       </form>
     </div>
   </template>
   
   <script setup>
   import { ref, reactive } from 'vue'
-  import { useRouter } from 'vue-router'
   import { useAuthStore } from '@/stores/auth'
   
-  const router = useRouter()
   const authStore = useAuthStore()
   
   const form = reactive({
-    userName: '',
-    password: ''
+    email: ''
   })
   
   const errors = reactive({
-    userName: '',
-    password: ''
+    email: ''
   })
   
   const isSubmitting = ref(false)
-  const loginError = ref('')
+  const resetError = ref('')
+  const successMessage = ref('')
   
   const validationRules = {
-    userName: value => value.length >= 3 || '用户名至少3个字符',
-    password: value => value.length >= 6 || '密码至少6个字符'
+    email: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || '邮箱格式不正确'
   }
   
   const validateField = (field) => {
     errors[field] = validationRules[field](form[field]) || ''
   }
-  
+  /* 这里重置密码的方法存疑*/
   const handleSubmit = async () => {
-    Object.keys(form).forEach(field => validateField(field))
-    if (Object.values(errors).some(error => error)) return
-    if (form.userName === 'admin' || form.password === '123456') {
-      router.push('/') 
-      return
-    }
+    validateField('email')
+    if (errors.email) return
+
     try {
       isSubmitting.value = true
-      await authStore.login(form)
-      router.push('/') 
+      await authStore.sendResetEmail(form.email)
+      successMessage.value = '重置链接已发送至您的邮箱'
+      resetError.value = ''
     } catch (error) {
-      loginError.value = error.message || '登录失败'
+      resetError.value = error.message || '发送重置邮件失败'
+      successMessage.value = ''
     } finally {
       isSubmitting.value = false
     }
@@ -92,6 +74,11 @@
   </script>
   
   <style scoped>
+  .success {
+    color: #28a745;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+  }
   .login-container {
     display: flex;
     justify-content: center;
