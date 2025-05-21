@@ -1,0 +1,10 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    druid:
+      driver-class-name:
+      url:
+      username:
+      password:
