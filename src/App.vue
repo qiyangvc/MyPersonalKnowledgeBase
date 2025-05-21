@@ -56,16 +56,21 @@ h1 {
 .login-button:hover {
   background: #2980b9;
 }
-/* 下面两项不一定必要 */
-/* 确保根元素和body没有默认边距 */
+</style>
+
+<style>
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: #ffffff; /* 添加白色背景 */
-  color: #333333; /* 设置文本颜色，确保在白色背景上可见 */
+  background-color: #ffffff;
+  color: #333333; /* 默认文本颜色 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
 #app {
@@ -73,7 +78,13 @@ html, body {
   padding: 0;
   height: 100%;
   width: 100%;
-  background-color: #ffffff; /* 添加白色背景 */
+  background-color: #ffffff;
+  color: #333333; /* 确保应用文本颜色 */
+}
+
+/* 确保所有文本默认为黑色 */
+p, h1, h2, h3, h4, h5, h6, span, div, li, a {
+  color: inherit;
 }
 </style>
 
