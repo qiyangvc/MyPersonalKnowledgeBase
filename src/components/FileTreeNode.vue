@@ -3,6 +3,7 @@
     <div 
       class="node-content" 
       @click="handleNodeClick"
+      @contextmenu="handleContextMenu"
       :class="{ 
         'is-folder': node.isDir, 
         'is-file': !node.isDir
@@ -25,6 +26,7 @@
         :key="child.fid"
         :node="child"
         @node-click="onChildClick"
+        @node-context-menu="onChildContextMenu"
       />
     </div>
   </div>
@@ -40,7 +42,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['node-click']);
+const emit = defineEmits(['node-click', 'node-context-menu']);
 
 // 控制文件夹展开/收起状态
 const expanded = ref(false);
@@ -56,9 +58,28 @@ const handleNodeClick = () => {
   emit('node-click', props.node);
 };
 
+// 处理右键点击事件
+const handleContextMenu = (event) => {
+  // 阻止默认右键菜单
+  event.preventDefault();
+  
+  // 如果不是文件夹，则触发右键菜单事件
+  if (!props.node.isDir) {
+    emit('node-context-menu', {
+      node: props.node,
+      event: event
+    });
+  }
+};
+
 // 从子节点传递点击事件
 const onChildClick = (node) => {
   emit('node-click', node);
+};
+
+// 从子节点传递右键菜单事件
+const onChildContextMenu = (data) => {
+  emit('node-context-menu', data);
 };
 
 // 根据文件名获取对应的图标类名

@@ -5,7 +5,7 @@
     <!-- 分为左右两部分的布局 -->
     <div class="resource-layout">
       <!-- 左侧文件树 -->
-      <div class="file-tree-panel">
+      <div class="file-tree-panel" :style="{ width: fileTreeWidth + 'px' }">
         <h3 class="panel-title">文件资源</h3>
         <div v-if="isLoadingTree" class="loading-state">
           <div class="spinner"></div>
@@ -22,6 +22,9 @@
             @node-click="handleNodeClick"
           />
         </div>
+        
+        <!-- 添加调整大小的分隔线 -->
+        <Resizer :onResize="handleTreeResize" />
       </div>
       
       <!-- 右侧文件内容 -->
@@ -32,6 +35,9 @@
         <div v-else>
           <div class="file-header">
             <h2>{{ currentFile.fName }}</h2>
+            <button class="close-button" @click="closeFile" title="关闭文件">
+              <span>×</span>
+            </button>
           </div>
           
           <div v-if="isLoadingContent" class="loading-state">
@@ -49,12 +55,26 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { marked } from 'marked'; 
 import FileTreeNode from '@/components/FileTreeNode.vue';
+import Resizer from '@/components/Resizer.vue';
 
 const store = useAuthStore();
+
+// 文件树宽度状态
+const fileTreeWidth = ref(220); // 初始宽度
+const minTreeWidth = 160; // 最小宽度
+const maxTreeWidth = 400; // 最大宽度
+
+// 处理文件树大小调整
+const handleTreeResize = (deltaX) => {
+  fileTreeWidth.value += deltaX;
+  // 限制最小和最大宽度
+  if (fileTreeWidth.value < minTreeWidth) fileTreeWidth.value = minTreeWidth;
+  if (fileTreeWidth.value > maxTreeWidth) fileTreeWidth.value = maxTreeWidth;
+};
 
 // 配置marked选项
 marked.setOptions({
@@ -101,6 +121,11 @@ const handleNodeClick = async (node) => {
   }
 };
 
+// 关闭当前文件
+const closeFile = () => {
+  store.closeCurrentFile();
+};
+
 // 组件挂载时获取资源树
 onMounted(async () => {
   try {
@@ -124,12 +149,13 @@ onMounted(async () => {
 }
 
 .file-tree-panel {
-  width: 280px;
+  position: relative; /* 为 Resizer 提供定位上下文 */
   height: 100%;
   border-right: 1px solid #e0e0e0;
   padding: 15px;
   overflow-y: auto;
   background-color: #f9f9f9;
+  flex-shrink: 0;
 }
 
 .panel-title {
@@ -187,9 +213,33 @@ onMounted(async () => {
 }
 
 .file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.close-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  color: #666;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background-color: #f44336;
+  color: white;
+  border-color: #f44336;
 }
 
 .markdown-content {
@@ -209,8 +259,15 @@ onMounted(async () => {
 .markdown-content :deep(pre) { background-color: #f4f4f4; padding: 1em; overflow-x: auto; color: #333; font-weight: normal; }
 .markdown-content :deep(blockquote) { border-left: 4px solid #ddd; padding-left: 1em; margin-left: 0; color: #333; }
 .markdown-content :deep(img) { max-width: 100%; }
-.markdown-content :deep(a) { color: #0d6efd; text-decoration: none; font-weight: 500; }
-.markdown-content :deep(a):hover { text-decoration: underline; }
+.markdown-content :deep(a) { 
+  color: #0d6efd; 
+  text-decoration: underline; /* 将无下划线改为有下划线 */
+  font-weight: 500; 
+}
+.markdown-content :deep(a):hover { 
+  text-decoration: underline; 
+  color: #0a58ca; /* 添加悬停时的颜色变化，使交互效果更明显 */
+}
 .markdown-content :deep(strong), .markdown-content :deep(b) { font-weight: 700; color: #000000; }
 .markdown-content :deep(em), .markdown-content :deep(i) { font-style: italic; }
 

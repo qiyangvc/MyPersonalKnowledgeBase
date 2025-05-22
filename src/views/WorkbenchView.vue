@@ -2,10 +2,10 @@
   <div class="workbench-container">
     <h1>学习工作台</h1>
     
-    <!-- 分为左右两部分的布局 -->
+    <!-- 分为左右多部分的布局 -->
     <div class="workbench-layout">
       <!-- 左侧文件树 -->
-      <div class="file-tree-panel">
+      <div class="file-tree-panel" :style="{ width: fileTreeWidth + 'px' }">
         <h3 class="panel-title">文件资源</h3>
         <div v-if="isLoadingTree" class="loading-state">
           <div class="spinner"></div>
@@ -20,9 +20,38 @@
             :key="item.fid" 
             :node="item" 
             @node-click="handleNodeClick"
+            @node-context-menu="handleNodeContextMenu"
           />
         </div>
+        
+        <!-- 添加调整大小的分隔线 -->
+        <Resizer :onResize="handleTreeResize" />
       </div>
+      
+      <!-- 中间链接预览区域 - 仅在有预览内容时显示 -->
+      <template v-if="previewFile">
+        <div class="preview-panel" :style="{ width: previewPanelWidth + 'px' }">
+          <div class="preview-header">
+            <div class="preview-title">
+              <h3>预览: {{ previewFile.fName }}</h3>
+              <span class="preview-path">{{ previewFile.URL }}</span>
+            </div>
+            <button class="close-button preview-close" @click="closePreview" title="关闭预览">
+              <span>×</span>
+            </button>
+          </div>
+          <div v-if="isLoadingPreview" class="loading-state">
+            <div class="spinner"></div>
+            <span>加载预览内容中...</span>
+          </div>
+          <div v-else-if="previewError" class="error-message">
+            {{ previewError }}
+          </div>
+          <div v-else class="markdown-content preview-content" v-html="renderedPreviewContent"></div>
+        </div>
+        <!-- 预览面板和右侧内容之间的分隔线 -->
+        <Resizer :onResize="handlePreviewResize" />
+      </template>
       
       <!-- 右侧文件内容 -->
       <div class="file-content-panel">
@@ -57,6 +86,9 @@
               </button>
               <span v-if="saveStatus" class="save-status success">{{ saveStatus }}</span>
               <span v-if="saveError" class="save-status error">{{ saveError }}</span>
+              <button class="close-button" @click="closeFile" title="关闭文件">
+                <span>×</span>
+              </button>
             </div>
           </div>
           
@@ -76,19 +108,33 @@
               ></textarea>
             </div>
             <!-- 预览模式 -->
-            <div v-else class="markdown-content" v-html="renderedContent"></div>
+            <div v-else class="markdown-content" v-html="renderedContent" @click="handleContentClick"></div>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- 文件右键菜单 -->
+    <div v-if="showContextMenu" class="context-menu" :style="contextMenuStyle">
+      <div class="menu-item" @click="copyFileUrl">
+        <span class="menu-icon">📋</span> 复制Markdown链接
+      </div>
+      <div class="menu-item" @click="openFile">
+        <span class="menu-icon">📄</span> 打开文件
+      </div>
+      <div class="menu-item" @click="previewFileFromMenu">
+        <span class="menu-icon">👁️</span> 预览文件
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { marked } from 'marked'; 
 import FileTreeNode from '@/components/FileTreeNode.vue';
+import Resizer from '@/components/Resizer.vue';
 import authApi from '@/api/auth';
 
 const store = useAuthStore();
@@ -98,6 +144,27 @@ const isEditing = ref(false);
 const editableContent = ref('');
 const saveStatus = ref('');
 const saveError = ref('');
+
+// 右键菜单状态
+const showContextMenu = ref(false);
+const contextMenuStyle = ref({
+  top: '0px',
+  left: '0px'
+});
+const selectedNode = ref(null);
+
+// 预览状态
+const previewFile = ref(null);
+const previewContent = ref('');
+const isLoadingPreview = ref(false);
+const previewError = ref('');
+
+// 面板宽度状态
+const fileTreeWidth = ref(220); // 初始宽度
+const previewPanelWidth = ref(300); // 初始宽度
+const minWidth = 160; // 最小宽度
+const maxTreeWidth = 400; // 文件树最大宽度
+const maxPreviewWidth = 500; // 预览面板最大宽度
 
 // 配置marked选项
 marked.setOptions({
@@ -137,6 +204,15 @@ const renderedContent = computed(() => {
   return `<pre>${store.currentFileContent}</pre>`;
 });
 
+// 渲染预览内容
+const renderedPreviewContent = computed(() => {
+  if (!previewContent.value) return '';
+  if (previewFile.value && previewFile.value.fName.toLowerCase().endsWith('.md')) {
+    return marked(previewContent.value);
+  }
+  return `<pre>${previewContent.value}</pre>`;
+});
+
 // 处理文件节点点击
 const handleNodeClick = async (node) => {
   if (node.isDir) return; // 如果是目录，不进行操作
@@ -160,6 +236,139 @@ const handleNodeClick = async (node) => {
       console.error('获取文件内容失败', error);
     }
   }
+};
+
+// 处理文件节点右键点击
+const handleNodeContextMenu = (data) => {
+  // 显示右键菜单
+  showContextMenu.value = true;
+  selectedNode.value = data.node;
+  
+  // 设置菜单位置
+  contextMenuStyle.value = {
+    top: `${data.event.clientY}px`,
+    left: `${data.event.clientX}px`
+  };
+};
+
+// 复制文件URL到剪贴板
+const copyFileUrl = () => {
+  if (selectedNode.value && selectedNode.value.URL) {
+    const fileUrl = selectedNode.value.URL;
+    const fileName = selectedNode.value.fName;
+    // 生成Markdown格式的链接
+    const markdownLink = `[${fileName}](${fileUrl})`;
+    
+    navigator.clipboard.writeText(markdownLink)
+      .then(() => {
+        saveStatus.value = 'Markdown链接已复制到剪贴板';
+        setTimeout(() => {
+          saveStatus.value = '';
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('复制失败: ', err);
+        saveError.value = '复制链接失败';
+        setTimeout(() => {
+          saveError.value = '';
+        }, 2000);
+      });
+  }
+  closeContextMenu();
+};
+
+// 从右键菜单打开文件
+const openFile = async () => {
+  if (selectedNode.value) {
+    await handleNodeClick(selectedNode.value);
+  }
+  closeContextMenu();
+};
+
+// 从右键菜单预览文件
+const previewFileFromMenu = async () => {
+  if (selectedNode.value) {
+    await loadPreview(selectedNode.value);
+  }
+  closeContextMenu();
+};
+
+// 关闭右键菜单
+const closeContextMenu = () => {
+  showContextMenu.value = false;
+  selectedNode.value = null;
+};
+
+// 处理内容区域点击，用于链接预览
+const handleContentClick = async (event) => {
+  // 检查是否点击的是链接
+  if (event.target.tagName === 'A') {
+    event.preventDefault();
+    const url = event.target.getAttribute('href');
+    
+    // 尝试在文件树中查找匹配的文件
+    const file = findFileByUrl(url);
+    if (file) {
+      await loadPreview(file);
+    } else {
+      // 如果找不到文件，可以尝试直接加载URL内容
+      previewFile.value = { fName: url.split('/').pop(), URL: url };
+      await loadPreviewContent(url);
+    }
+  }
+};
+
+// 在文件树中查找匹配URL的文件
+const findFileByUrl = (url) => {
+  // 递归搜索函数
+  const searchInTree = (nodes) => {
+    if (!nodes) return null;
+    
+    for (const node of nodes) {
+      if (!node.isDir && node.URL === url) {
+        return node;
+      }
+      
+      if (node.isDir && node.children) {
+        const found = searchInTree(node.children);
+        if (found) return found;
+      }
+    }
+    
+    return null;
+  };
+  
+  return searchInTree(resourceTree.value);
+};
+
+// 加载预览文件
+const loadPreview = async (file) => {
+  previewFile.value = file;
+  await loadPreviewContent(file.URL);
+};
+
+// 加载预览内容
+const loadPreviewContent = async (url) => {
+  isLoadingPreview.value = true;
+  previewError.value = '';
+  
+  try {
+    const response = await authApi.getFileContent(url);
+    previewContent.value = response.data;
+  } catch (error) {
+    console.error('加载预览内容失败', error);
+    previewError.value = `加载预览内容失败: ${error.message || '未知错误'}`;
+    previewContent.value = '';
+  } finally {
+    isLoadingPreview.value = false;
+  }
+};
+
+// 关闭预览
+const closePreview = () => {
+  previewFile.value = null;
+  previewContent.value = '';
+  previewError.value = '';
 };
 
 // 开始编辑文件
@@ -216,13 +425,54 @@ const cancelEditing = () => {
   saveError.value = '';
 };
 
-// 组件挂载时获取资源树
+// 关闭当前文件
+const closeFile = () => {
+  // 如果正在编辑，提示用户保存或取消
+  if (isEditing.value) {
+    if (!confirm('你有未保存的更改，确定要关闭文件吗？')) {
+      return;
+    }
+    isEditing.value = false;
+    editableContent.value = '';
+  }
+  
+  store.closeCurrentFile();
+};
+
+// 全局点击事件，用于关闭右键菜单
+const handleGlobalClick = () => {
+  if (showContextMenu.value) {
+    closeContextMenu();
+  }
+};
+
+// 文件树缩放
+const handleTreeResize = (deltaX) => {
+  fileTreeWidth.value += deltaX;
+  if (fileTreeWidth.value < minWidth) fileTreeWidth.value = minWidth;
+  if (fileTreeWidth.value > maxTreeWidth) fileTreeWidth.value = maxTreeWidth;
+};
+
+// 预览面板缩放（修正为调整previewPanelWidth）
+const handlePreviewResize = (deltaX) => {
+  previewPanelWidth.value += deltaX;
+  if (previewPanelWidth.value < minWidth) previewPanelWidth.value = minWidth;
+  if (previewPanelWidth.value > maxPreviewWidth) previewPanelWidth.value = maxPreviewWidth;
+};
+
+// 挂载时添加全局点击事件监听
 onMounted(async () => {
+  document.addEventListener('click', handleGlobalClick);
   try {
     await store.fetchResourceTree();
   } catch (error) {
     console.error('获取资源树失败', error);
   }
+});
+
+// 卸载前移除事件监听
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleGlobalClick);
 });
 </script>
 
@@ -231,20 +481,75 @@ onMounted(async () => {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .workbench-layout {
   display: flex;
   height: calc(100% - 60px); /* 减去标题的高度 */
+  position: relative; /* 让 Resizer 定位生效 */
 }
 
 .file-tree-panel {
-  width: 280px;
+  position: relative; /* 为 Resizer 提供定位上下文 */
   height: 100%;
   border-right: 1px solid #e0e0e0;
   padding: 15px;
   overflow-y: auto;
   background-color: #f9f9f9;
+  flex-shrink: 0;
+}
+
+/* 预览面板样式 */
+.preview-panel {
+  position: relative; /* 为 Resizer 提供定位上下文 */
+  height: 100%;
+  border-right: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f0f0f0;
+}
+
+.preview-title {
+  overflow: hidden;
+}
+
+.preview-title h3 {
+  font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-path {
+  font-size: 12px;
+  color: #666;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-close {
+  margin-left: 10px;
+}
+
+.preview-content {
+  padding: 15px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .panel-title {
@@ -259,6 +564,33 @@ onMounted(async () => {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+}
+
+.menu-item {
+  padding: 8px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-icon {
+  margin-right: 10px;
+  font-size: 16px;
 }
 
 .loading-state {
@@ -389,8 +721,15 @@ onMounted(async () => {
 .markdown-content :deep(pre) { background-color: #f4f4f4; padding: 1em; overflow-x: auto; color: #333; font-weight: normal; }
 .markdown-content :deep(blockquote) { border-left: 4px solid #ddd; padding-left: 1em; margin-left: 0; color: #333; }
 .markdown-content :deep(img) { max-width: 100%; }
-.markdown-content :deep(a) { color: #0d6efd; text-decoration: none; font-weight: 500; }
-.markdown-content :deep(a):hover { text-decoration: underline; }
+.markdown-content :deep(a) { 
+  color: #0d6efd; 
+  text-decoration: underline; /* 将无下划线改为有下划线 */
+  font-weight: 500; 
+}
+.markdown-content :deep(a):hover { 
+  text-decoration: underline; 
+  color: #0a58ca; /* 添加悬停时的颜色变化，使交互效果更明显 */
+}
 .markdown-content :deep(strong), .markdown-content :deep(b) { font-weight: 700; color: #000000; }
 .markdown-content :deep(em), .markdown-content :deep(i) { font-style: italic; }
 
@@ -439,5 +778,32 @@ onMounted(async () => {
 .save-status.error {
   color: #f44336;
   background-color: rgba(244, 67, 54, 0.1);
+}
+
+.close-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  color: #666;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 10px;
+}
+
+.close-button:hover {
+  background-color: #f44336;
+  color: white;
+  border-color: #f44336;
+}
+
+/* 修正Resizer在预览面板和右侧内容之间的显示层级 */
+:deep(.resizer) {
+  z-index: 2;
 }
 </style>
