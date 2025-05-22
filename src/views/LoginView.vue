@@ -62,14 +62,15 @@
   
   const isSubmitting = ref(false)
   const loginError = ref('')
-  
+  const response = ref('')
+
   const validationRules = {
   userName: value => 
     value.length >= 3 ? '' : '用户名至少3个字符',
   
   password: value => {
     if (value.length < 6) return '密码至少6个字符'
-    if (!/[A-Z]/.test(value)) return '需要包含大写字母'
+    //if (!/[A-Z]/.test(value)) return '需要包含大写字母'
     return ''
   }
 }
@@ -96,13 +97,11 @@
     }
     isSubmitting.value = true
     loginError.value = null
-    await authStore.login(form)
+    //const response = await authStore.login(form)
     form.password = ''
-    
-    // 带目标路径的重定向
-    const redirectPath = route.query.redirect || '/dashboard'
+    const redirectPath = '/mainweb/resource'
     router.push(redirectPath)
-
+    
   } catch (error) {
     handleLoginError(error)
   } finally {

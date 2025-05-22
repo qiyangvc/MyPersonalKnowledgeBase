@@ -69,17 +69,38 @@ export const mockApi = {
     await delay(500);
     
     // 检查用户名和密码
-    if (credentials.userName === userData.userName && credentials.password === userData.password) {
+    if (credentials.userName == userData.userName && credentials.password == userData.password) {
       return {
         userID: userData.userID,
-        data: { token: 'mock-token' },
+        data: { 
+          success: true,
+          message: '登录成功'
+        },
         status: 200
       };
     } else {
       throw { response: { status: 401, data: 'Invalid credentials' } };
     }
   },
-
+  // 注册
+  async register(userData) {
+    // 模拟网络延迟
+    await delay(500);
+    
+    // 检查用户名和密码
+    if (userData.userName && userData.password) {
+      return {
+        data: { 
+          success: true,
+          message: '注册成功'
+        },
+        status: 200
+      };
+    } else {
+      throw { response: { status: 400, data: 'Invalid registration data' } };
+    }
+  }
+  ,
   // 保存文件内容
   saveFileContent(url, content) {
     return new Promise((resolve) => {

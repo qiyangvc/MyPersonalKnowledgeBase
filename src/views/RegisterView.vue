@@ -57,6 +57,7 @@
           </label>
         </div>
         <div class="error" v-if="registerError">{{ registerError }}</div>
+        <div>{{ response }}</div>
       </form>
     </div>
   </template>
@@ -85,27 +86,54 @@
   
   const isSubmitting = ref(false)
   const registerError = ref('')
-  
+  const response = ref('')
   const validationRules = {
-    userName: value => value.length >= 3 || '用户名至少3个字符',
-    email: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || '邮箱格式不正确',
-    password: value => value.length >= 6 || '密码至少6个字符',
-    confirmPassword: value => 
-      value === form.password || '两次输入的密码不一致'
+    userName: (value) => {
+      if (!value) return '用户名不能为空'
+      if (value.length < 3 || value.length > 20) return '用户名长度应在3到20个字符之间'
+      return ''
+    },
+    email: (value) => {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!value) return '邮箱不能为空'
+      if (!emailPattern.test(value)) return '邮箱格式不正确'
+      return ''
+    },
+    password: (value) => {
+      if (!value) return '密码不能为空'
+      if (value.length < 6 || value.length > 20) return '密码长度应在6到20个字符之间'
+      return ''
+    },
+    confirmPassword: (value) => {
+      if (!value) return '请确认密码'
+      if (value !== form.password) return '两次输入的密码不一致'
+      return ''
+    }
   }
   
   const validateField = (field) => {
-    errors[field] = validationRules[field](form[field]) || ''
+    if(!(field in validationRules)) {
+      console.warn(`字段 ${field} 缺少验证规则`)
+      return
+    }
+    const error = validationRules[field](form[field])
+    errors[field] = error ||''
   }
   
   const handleSubmit = async () => {
-    Object.keys(form).forEach(field => validateField(field))
-    if (Object.values(errors).some(error => error)) return
-  
     try {
+      Object.keys(form).forEach(validateField)
+      const hasErrors = Object.values(errors).some(Boolean)
+      if (hasErrors) {
+      registerError.value = '请正确填写所有必填字段'
+      return
+    }
       isSubmitting.value = true
-      await authStore.register({userName:form.userName, emailbox:form.email, password:form.password})
-      router.push('/login')
+      const response = await authStore.register({userName:form.userName, password:form.password, emailbox:form.email})
+      console.log(response)
+      if (response.data.success){
+        router.push('/login')
+      }
     } catch (error) {
       registerError.value = error.message || '注册失败'
     } finally {
