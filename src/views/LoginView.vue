@@ -64,31 +64,74 @@
   const loginError = ref('')
   
   const validationRules = {
-    userName: value => value.length >= 3 || '用户名至少3个字符',
-    password: value => value.length >= 6 || '密码至少6个字符'
+  userName: value => 
+    value.length >= 3 ? '' : '用户名至少3个字符',
+  
+  password: value => {
+    if (value.length < 6) return '密码至少6个字符'
+    if (!/[A-Z]/.test(value)) return '需要包含大写字母'
+    return ''
   }
+}
   
   const validateField = (field) => {
-    errors[field] = validationRules[field](form[field]) || ''
+  // 防御性编程
+  if (!(field in validationRules)) {
+    console.warn(`字段 ${field} 缺少验证规则`)
+    return
   }
   
+  const result = validationRules[field](form[field])
+  errors[field] = result || '' // 明确处理空值
+}
+  
   const handleSubmit = async () => {
-    Object.keys(form).forEach(field => validateField(field))
-    if (Object.values(errors).some(error => error)) return
-    if (form.userName === 'admin' || form.password === '123456') {
-      router.push('/') 
+  try {
+    Object.keys(form).forEach(validateField)
+    // await nextTick()
+    const hasErrors = Object.values(errors).some(Boolean)
+    if (hasErrors) {
+      loginError.value = errors||'请正确填写所有必填字段'
       return
     }
-    try {
-      isSubmitting.value = true
-      await authStore.login(form)
-      router.push('/') 
-    } catch (error) {
-      loginError.value = error.message || '登录失败'
-    } finally {
-      isSubmitting.value = false
-    }
+    isSubmitting.value = true
+    loginError.value = null
+    await authStore.login(form)
+    form.password = ''
+    
+    // 带目标路径的重定向
+    const redirectPath = route.query.redirect || '/dashboard'
+    router.push(redirectPath)
+
+  } catch (error) {
+    handleLoginError(error)
+  } finally {
+    isSubmitting.value = false
   }
+}
+
+// 集中式错误处理器
+const handleLoginError = (error) => {
+  // 网络错误处理
+  if (error.isAxiosError && !error.response) {
+    loginError.value = '网络连接异常，请检查网络设置'
+    return
+  }
+
+  // 后端返回的标准错误
+  const statusCode = error.response?.status
+  switch (statusCode) {
+    case 401:
+      loginError.value = '用户名或密码不正确'
+      break
+    case 429:
+      loginError.value = '尝试次数过多，请稍后重试'
+      break
+    default:
+      // printf('未知错误：', error)
+      loginError.value = error.response?.data?.message || error.message || '登录失败'
+  }
+}
   </script>
   
   <style scoped>
@@ -98,15 +141,19 @@
     align-items: center;
     width: min(90vw, 600px); /* 最大600px，最小90%视宽 */
     min-height: min(80vh, 560px); /* 高度自适应 */
-    background: white;
+    transition:
+    color 0.5s,
+    background-color 0.5s;
   }
   @media (min-width: 768px) {
   .login-form {
     padding: 4rem 3rem; /* 大屏增加内边距 */
-    background: white;
+    transition:
+    color 0.5s,
+    background-color 0.5s;
     padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 400px;
   }
@@ -147,4 +194,5 @@
     font-size: 0.875rem;
     margin-top: 0.25rem;
   }
+  
   </style>

@@ -120,12 +120,16 @@
     align-items: center;
     width: min(90vw, 600px); /* 最大600px，最小90%视宽 */
     min-height: min(80vh, 560px); /* 高度自适应 */
-    background: white;
+    transition:
+    color 0.5s,
+    background-color 0.5s;
   }
   @media (min-width: 768px) {
   .login-form {
     padding: 4rem 3rem; /* 大屏增加内边距 */
-    background: white;
+    transition:
+    color 0.5s,
+    background-color 0.5s;
     padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);

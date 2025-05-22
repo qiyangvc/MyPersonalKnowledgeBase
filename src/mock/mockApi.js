@@ -1,4 +1,6 @@
+import { use } from 'marked';
 import { resourceTreeData } from './resourceTree';
+import { userData } from './userdata';
 
 // 模拟文件内容映射
 const fileContents = {
@@ -59,5 +61,22 @@ export const mockApi = {
         } 
       };
     }
-  }
+  },
+
+  // 登录
+  async login(credentials) {
+    // 模拟网络延迟
+    await delay(500);
+    
+    // 检查用户名和密码
+    if (credentials.userName === userData.userName && credentials.password === userData.password) {
+      return {
+        userID: userData.userID,
+        data: { token: 'mock-token' },
+        status: 200
+      };
+    } else {
+      throw { response: { status: 401, data: 'Invalid credentials' } };
+    }
+  },
 };

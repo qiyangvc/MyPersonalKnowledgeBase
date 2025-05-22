@@ -56,35 +56,5 @@ h1 {
 .login-button:hover {
   background: #2980b9;
 }
+
 </style>
-
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background-color: #ffffff;
-  color: #333333; /* 默认文本颜色 */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
-}
-
-#app {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  background-color: #ffffff;
-  color: #333333; /* 确保应用文本颜色 */
-}
-
-/* 确保所有文本默认为黑色 */
-p, h1, h2, h3, h4, h5, h6, span, div, li, a {
-  color: inherit;
-}
-</style>
-
