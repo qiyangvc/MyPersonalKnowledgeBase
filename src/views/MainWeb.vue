@@ -175,5 +175,6 @@ const toggleSidebar = () => {
   padding: 20px;
   overflow-y: auto;
   background-color: #ffffff; /* 添加白色背景 */
+  color: #000000; /* 添加黑色文本颜色 */
 }
 </style>

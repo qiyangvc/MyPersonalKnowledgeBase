@@ -1,5 +1,7 @@
 <template>
   <div class="resource-container">
+    <h1>资源管理</h1>
+    
     <!-- 分为左右两部分的布局 -->
     <div class="resource-layout">
       <!-- 左侧文件树 -->
@@ -118,7 +120,7 @@ onMounted(async () => {
 
 .resource-layout {
   display: flex;
-  height: 100%;
+  height: calc(100% - 60px); /* 减去标题的高度 */
 }
 
 .file-tree-panel {

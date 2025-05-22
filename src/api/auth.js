@@ -47,5 +47,13 @@ export default {
       return mockApi.getFileContent(url);
     }
     return axios.get(url);
+  },
+  
+  // 保存文件内容
+  saveFileContent(url, content) {
+    if (USE_MOCK_DATA) {
+      return mockApi.saveFileContent(url, content);
+    }
+    return axios.put(url, { content });
   }
 }

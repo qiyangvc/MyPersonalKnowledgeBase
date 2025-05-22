@@ -79,4 +79,22 @@ export const mockApi = {
       throw { response: { status: 401, data: 'Invalid credentials' } };
     }
   },
+
+  // 保存文件内容
+  saveFileContent(url, content) {
+    return new Promise((resolve) => {
+      // 模拟网络延迟
+      setTimeout(() => {
+        // 在实际存储中更新文件内容
+        // 这里仅模拟成功响应
+        console.log(`模拟保存文件内容到 ${url}`, content);
+        resolve({ 
+          data: { 
+            success: true, 
+            message: '文件保存成功'
+          }
+        });
+      }, 500);
+    });
+  },
 };

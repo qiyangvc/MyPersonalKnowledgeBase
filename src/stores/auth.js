@@ -88,6 +88,11 @@ export const useAuthStore = defineStore('auth', {
     // 设置当前选中文件
     setCurrentFile(file) {
       this.currentFile = file
+    },
+    
+    // 更新当前文件内容
+    updateCurrentFileContent(content) {
+      this.currentFileContent = content
     }
   }
 })
